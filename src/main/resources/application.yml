@@ -1,0 +1,14 @@
+bot:
+    key: 7560315511:AAGJyaNacSDNXX0tcz2UKUAq5zk67zTmQr0
+    name: Webster onboarding
+spring:
+    application:
+        name: telegram-bot
+    datasource:
+        driver-class-name: org.postgresql.Driver
+        url: jdbc:postgresql://localhost:5432/on-boarding
+        username: postgres
+        password: 0505
+    jpa:
+        hibernate:
+            ddl-auto: update
