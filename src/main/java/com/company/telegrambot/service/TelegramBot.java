@@ -3,6 +3,7 @@ package com.company.telegrambot.service;
 import com.company.telegrambot.config.BotConfig;
 import com.company.telegrambot.entity.Club;
 import com.company.telegrambot.entity.Event;
+import com.company.telegrambot.entity.Professor;
 import com.company.telegrambot.entity.User;
 import com.company.telegrambot.enums.EventType;
 import com.company.telegrambot.repository.UserRepository;
@@ -41,10 +42,13 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Autowired
     private ClubService clubService;
 
-    private int currentPage = 0;
+    @Autowired
+    private ProfessorService professorService;
 
     @Autowired
     private UserRepository userRepository;
+
+    private int currentPage = 0;
 
 
     private static final String HELP_TEXT = """
@@ -65,10 +69,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         this.config = config;
         List<BotCommand> listOfCommands = new ArrayList<>();
         listOfCommands.add(new BotCommand("start", "get a welcome message"));
-        listOfCommands.add(new BotCommand("events \uD83C\uDFB8", "get info about upcoming events "));
         listOfCommands.add(new BotCommand("clubs 🏇", "get info about clubs of the university"));
         listOfCommands.add(new BotCommand("events", "get info about upcoming events"));
-        listOfCommands.add(new BotCommand("important_rooms", "delete my data"));
+        listOfCommands.add(new BotCommand("professors 👩‍🏫", "get info about professor in the uni"));
         listOfCommands.add(new BotCommand("help", "info how to use this bot"));
         try {
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
@@ -98,11 +101,11 @@ public class TelegramBot extends TelegramLongPollingBot {
                     startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
                     registerUser(update.getMessage());
                     break;
-                case "/events":
-                    eventCommandReceived(chatId, currentPage);
-                    break;
                 case "events 🎸":  // Adjust this to match your button label
                     eventCommandReceived(chatId, currentPage);
+                    break;
+                case "professors 👩‍🏫":
+                    professorCommandReceived(chatId, currentPage);
                     break;
                 case "clubs 🏇":
                     clubCommandReceived(chatId, currentPage);
@@ -116,33 +119,31 @@ public class TelegramBot extends TelegramLongPollingBot {
         } else if (update.hasCallbackQuery()) {
             String callbackData = update.getCallbackQuery().getData();
             long chatId = update.getCallbackQuery().getMessage().getChatId();
+            String determiner = update.getCallbackQuery().getMessage().getText();
             if (callbackData.equals(NEXT_BUTTON)) {
                 currentPage++;
-                if (update.getCallbackQuery().getMessage().getText().startsWith("Events:")) {
+                if (determiner.startsWith("Events:")) {
                     eventCommandReceived(chatId, currentPage);
-                } else if (update.getCallbackQuery().getMessage().getText().startsWith("Clubs:")) {
+                } else if (determiner.startsWith("Clubs:")) {
                     clubCommandReceived(chatId, currentPage);
+                }else if (determiner.startsWith("Professors:")) {
+                    professorCommandReceived(chatId, currentPage);
                 }
             } else if (callbackData.equals(PREV_BUTTON)) {
                 if (currentPage > 0) {
                     currentPage--;
                 }
-                if (update.getCallbackQuery().getMessage().getText().startsWith("Events:")) {
+                if (determiner.startsWith("Events:")) {
                     eventCommandReceived(chatId, currentPage);
-                } else if (update.getCallbackQuery().getMessage().getText().startsWith("Clubs:")) {
+                } else if (determiner.startsWith("Clubs:")) {
                     clubCommandReceived(chatId, currentPage);
+                }else if (determiner.startsWith("Professors:")) {
+                    professorCommandReceived(chatId, currentPage);
                 }
             }
 
 
         }
-    }
-
-
-    private void startCommandReceived(long chatId, String username) {
-        String answer = EmojiParser.parseToUnicode("Hi, " + username + ", nice to meet you!" + " :blush:");
-        log.info("Replied to user {} ", username);
-        sendMessage(chatId, answer);
     }
 
 
@@ -176,7 +177,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         row = new KeyboardRow();
 
-        row.add("professors  \uD83D\uDC69\uD83C\uDFFC\u200D\uD83C\uDFEB");
+        row.add("professors 👩‍🏫");
         row.add("clubs 🏇");
         row.add("university facilities  \uD83E\uDDD8\uD83C\uDFFB\u200D♂️");
 
@@ -208,6 +209,67 @@ public class TelegramBot extends TelegramLongPollingBot {
         return config.getBotName();
     }
 
+    private void professorCommandReceived(long chatId, int page) {
+
+        createProfessor();
+        createProfessor();
+        createProfessor();
+        createProfessor();
+
+        var professors = professorService.findAll(page, 1);
+
+        StringBuilder messageText = new StringBuilder("Professors:\n");
+
+        for (Professor professor : professors) {
+            String temple = """
+                    Full name: %s\s
+                    Background: %s
+                    linkedIn account: %s
+                    email: %s""";
+
+            String message = String.format(temple, professor.getFullName(),
+                    professor.getBackground(), professor.getLinkedInAccount(), professor.getEmail());
+            messageText.append(message).append("\n");
+            log.info("Response Professors {}", professors);
+        }
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(messageText.toString());
+
+        InlineKeyboardMarkup markUpInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
+        List<InlineKeyboardButton> rowInLine = new ArrayList<>();
+
+        if (professors.hasPrevious()) {
+            var prevButton = new InlineKeyboardButton();
+            prevButton.setText("Previous");
+            prevButton.setCallbackData(PREV_BUTTON);
+            rowInLine.add(prevButton);
+        }
+        if (professors.hasNext()) {
+            var nextButton = new InlineKeyboardButton();
+            nextButton.setText("Next");
+            nextButton.setCallbackData(NEXT_BUTTON);
+            rowInLine.add(nextButton);
+        }
+        rowsInLine.add(rowInLine);
+        markUpInline.setKeyboard(rowsInLine);
+        message.setReplyMarkup(markUpInline);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error sending Professors list: {}", e.getMessage());
+        }
+    }
+
+
+    private void startCommandReceived(long chatId, String username) {
+        String answer = EmojiParser.parseToUnicode("Hi, " + username + ", nice to meet you!" + " :blush:");
+        log.info("Replied to user {} ", username);
+        sendMessage(chatId, answer);
+    }
+
     private void eventCommandReceived(long chatId, int page) {
         createEvent();
         createEvent();
@@ -225,7 +287,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     Date : %s
                     Organized by : %s""";
 
-            String message = String.format(temple, event.getEventType().toString(),
+            String message = String.format(temple, event.getEventType().toString().toLowerCase(),
                     event.getTitle(), event.getDescription(), event.getVenue(), event.getDate().toString(), event.getEventOrganizedBy());
             messageText.append(message).append("\n");
             log.info("Response Events {}", events);
@@ -311,6 +373,14 @@ public class TelegramBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             log.error("Error sending Clubs list: {}", e.getMessage());
         }
+    }
+
+    /// TEST professor create
+    private void createProfessor() {
+        var professor = new Professor("Bayramov Xabibulloh",
+                "just background Oh acceptance apartments up sympathize astonished delightful. Waiting him new lasting towards",
+                "linkedin.com/in/khabibulloh-bayramov", "xbayramov@webster.edu");
+        professorService.addProfessor(professor);
     }
 
     //TEST event create
