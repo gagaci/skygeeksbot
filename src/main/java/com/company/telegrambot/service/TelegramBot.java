@@ -1,7 +1,7 @@
 package com.company.telegrambot.service;
 
-import com.company.telegrambot.BotState;
 import com.company.telegrambot.config.BotConfig;
+import com.company.telegrambot.entity.Club;
 import com.company.telegrambot.entity.Event;
 import com.company.telegrambot.entity.User;
 import com.company.telegrambot.enums.EventType;
@@ -9,12 +9,10 @@ import com.company.telegrambot.repository.UserRepository;
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
@@ -28,48 +26,57 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
-import static java.awt.SystemColor.text;
 
 @Service
 @Slf4j
 public class TelegramBot extends TelegramLongPollingBot {
 
-    private static final String ERROR_TEXT = "Error";
-    private static final String YES_BUTTON = "YES_BUTTON";
     private static final String EVENT_BUTTON = "EVENT_BUTTON";
     private static final String NO_BUTTON = "NO_BUTTON";
 
+    private static final String CLUBS_BUTTON = "CLUBS_BUTTON";
+    private static final String NEXT_BUTTON = "NEXT_BUTTON";
+    private static final String PREV_BUTTON = "PREV_BUTTON";
+
     @Autowired
     private EventService eventService;
+
+    @Autowired
+    private ClubService clubService;
+
+    private int currentPage = 0;
 
 
     @Autowired
     private UserRepository userRepository;
 
 
-    private static final String HELP_TEXT = "This bot is for Webster Tashkent students to be familiar with the university.\n\n" +
-            "You can execute commands from the main menu on the left or by typing a command:\n\n" +
-            "Type /start to start the bot\n\n" +
-            "Type /events to see upcoming events\n\n" +
-            "Type /help to see this message again";
+    private static final String HELP_TEXT = """
+            This bot is for Webster Tashkent students to be familiar with the university.
+            
+            You can execute commands from the main menu on the left or by typing a command:
+            
+            Type /start to start the bot
+            
+            Type /events to see upcoming events
+            
+            Type /help to see this message again""";
 
 
     final BotConfig config;
 
-    public TelegramBot(BotConfig config, TomcatServletWebServerFactory tomcatServletWebServerFactory) {
+    public TelegramBot(BotConfig config) {
         this.config = config;
-        List<BotCommand> listofCommands = new ArrayList<>();
-        listofCommands.add(new BotCommand("start", "get a welcome message"));
-        listofCommands.add(new BotCommand("events \uD83C\uDFB8", "get info about upcoming events vinland saga"));
-        listofCommands.add(new BotCommand("events", "get info about upcoming events vinland saga"));
-        listofCommands.add(new BotCommand("important_rooms", "delete my data"));
-        listofCommands.add(new BotCommand("help", "info how to use this bot"));
+        List<BotCommand> listOfCommands = new ArrayList<>();
+        listOfCommands.add(new BotCommand("start", "get a welcome message"));
+        listOfCommands.add(new BotCommand("events \uD83C\uDFB8", "get info about upcoming events "));
+        listOfCommands.add(new BotCommand("clubs 🏇", "get info about clubs of the university"));
+        listOfCommands.add(new BotCommand("events", "get info about upcoming events vinland saga"));
+        listOfCommands.add(new BotCommand("important_rooms", "delete my data"));
+        listOfCommands.add(new BotCommand("help", "info how to use this bot"));
         try {
-            this.execute(new SetMyCommands(listofCommands, new BotCommandScopeDefault(), null));
+            this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
             log.error("Error setting bot's command list: " + e.getMessage());
         }
@@ -96,14 +103,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                     startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
                     registerUser(update.getMessage());
                     break;
-                case "/register":
-                    register(chatId);
-                    break;
                 case "/events":
                     eventCommandReceived(chatId);
                     break;
                 case "events 🎸":  // Adjust this to match your button label
                     eventCommandReceived(chatId);
+                    break;
+                case "clubs 🏇":
+                    clubCommandReceived(chatId, currentPage);
                     break;
                 case "/help":
                     sendMessage(chatId, HELP_TEXT);
@@ -113,61 +120,21 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
         } else if (update.hasCallbackQuery()) {
             String callbackData = update.getCallbackQuery().getData();
-            Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
             long chatId = update.getCallbackQuery().getMessage().getChatId();
-
-            if (callbackData.equals(YES_BUTTON)) {
-                String text = "yes";
-                executeEditMessageText(text, chatId, messageId);
-            } else if (callbackData.equals(NO_BUTTON)) {
-                String text = "You pressed NO button";
-                executeEditMessageText(text, chatId, messageId);
+            if (callbackData.equals(NEXT_BUTTON)) {
+                currentPage++;
+                clubCommandReceived(chatId, currentPage);
+            } else if (callbackData.equals(PREV_BUTTON)) {
+                if (currentPage > 0) {
+                    currentPage--;
+                }
+                clubCommandReceived(chatId, currentPage);
             }
 
+
         }
     }
 
-    private void executeEditMessageText(String text, long chatId, Integer messageId) {
-        EditMessageText message = new EditMessageText();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(text);
-        message.setMessageId(messageId);
-
-        try {
-            execute(message);
-        } catch (TelegramApiException e) {
-            log.error(ERROR_TEXT, e.getMessage());
-        }
-    }
-
-    private void register(long chatId) {
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
-        List<InlineKeyboardButton> rowInLine = new ArrayList<>();
-        var yesButton = new InlineKeyboardButton();
-        yesButton.setText("Events");
-        yesButton.setCallbackData(EVENT_BUTTON);
-
-        var noButton = new InlineKeyboardButton();
-        noButton.setText("No");
-        noButton.setCallbackData(NO_BUTTON);
-        rowInLine.add(yesButton);
-        rowInLine.add(noButton);
-
-        rowsInLine.add(rowInLine);
-
-        markupInline.setKeyboard(rowsInLine);
-
-        message.setReplyMarkup(markupInline);
-
-        try {
-            execute(message);
-        } catch (Exception e) {
-            log.error("Error {}", e.getMessage());
-        }
-    }
 
     private void startCommandReceived(long chatId, String username) {
         String answer = EmojiParser.parseToUnicode("Hi, " + username + ", nice to meet you!" + " :blush:");
@@ -176,33 +143,28 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void eventCommandReceived(long chatId) {
-//        createEvent();
+        createEvent();
+        createEvent();
+        createEvent();
         var events = eventService.getEvents();
-        String hm = "[eventType] = Social Event \n" +
-                "[title] =  Session with Mr John \n" +
-                "[description] = this is event for freshmen and seniors\n" +
-                "[venue] = North hole room 412\n" +
-                "[date] = 2024-05-10\n" +
-                "[organizedBy] = SGA";
 
-        String temple = "This is %s event\n" +
-                "%s \n" +
-                "Description : %s\n" +
-                "Venue: %s\n" +
-                "Date : %s\n" +
-                "Organized by : %s";
-        events.forEach(event -> {
-
-            sendMessage(chatId, String.format(temple, event.getEventType().toString(),
-                    event.getTitle(), event.getDescription(), event.getVenue(), event.getDate().toString(), event.getEventOrganizedBy()));
-        });
+        String temple = """
+                This is %s event
+                %s\s
+                Description : %s
+                Venue: %s
+                Date : %s
+                Organized by : %s""";
+        events.forEach(event -> sendMessage(chatId, String.format(temple, event.getEventType().toString(),
+                event.getTitle(), event.getDescription(), event.getVenue(), event.getDate().toString(), event.getEventOrganizedBy())));
+        log.info("Response Events {}",events);
     }
 
     private void sendMessage(long chatId, String textToSend) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(textToSend);
-        displayMenu(message,chatId);
+        displayMenu(message);
         try {
             execute(message);
         } catch (TelegramApiException e) {
@@ -210,11 +172,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void displayMenu(SendMessage message,long chatId) {
-
-        String messageText = message.getText();
-
-        String guitar = "\uD83C\uDFB8";
+    private void displayMenu(SendMessage message) {
 
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
 
@@ -233,8 +191,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         row = new KeyboardRow();
 
         row.add("professors  \uD83D\uDC69\uD83C\uDFFC\u200D\uD83C\uDFEB");
-        row.add("clubs  \uD83C\uDFF9");
-        row.add("university facilities  \uD83E\uDDD8\uD83C\uDFFB\u200D♂\uFE0F");
+        row.add("clubs 🏇");
+        row.add("university facilities  \uD83E\uDDD8\uD83C\uDFFB\u200D♂️");
 
         keyboardRows.add(row);
 
@@ -262,10 +220,77 @@ public class TelegramBot extends TelegramLongPollingBot {
         var event = new Event("Session With MR John", " this is event for freshmen and seniors", EventType.SOCIAL, "North hole room 412", LocalDate.now().plusDays(5), "SGA");
         eventService.addEvent(event);
     }
+    void createSpanishClub() {
+        var club = new Club("Spanish Club",
+                "Bienvenidos amigos! \uD83C\uDDEA\uD83C\uDDF8 Do you want to speak and communicate with Spanish speakers? Come to our classes",
+                "https://t.me/+FDo5gxtDQQowOWZi");
+        clubService.addClub(club);
+    }
+    void createArabicClub() {
+        var club = new Club("Arabic Club",
+                "! \uD83C\uDF19 Want to dive into the beauty of the Arabic language? Join our fun and interactive sessions with Mubina",
+                "https://t.me/arabicclubwut");
+        clubService.addClub(club);
+    }
+    void createGermanClub() {
+        var club = new Club("German Club",
+                "Hallo! \uD83C\uDF0D Join Bekzod in learning German and explore one of the most widely spoken languages in Europe",
+                "https://t.me/DeutschWebster");
+        clubService.addClub(club);
+    }
+
 
 
     @Override
     public String getBotUsername() {
         return config.getBotName();
+    }
+
+    private void clubCommandReceived(long chatId, int page) {
+        createSpanishClub();
+        createArabicClub();
+        createGermanClub();
+        var clubsPage = clubService.findAll(page, 1);
+        StringBuilder messageText = new StringBuilder("Clubs:\n");
+        for (Club club : clubsPage) {
+            String temple = """
+                Club name : %s
+                Description : %s
+                Contact: %s""";
+            String message = String.format(temple, club.getName(), club.getDescription(), club.getContact());
+            messageText.append(message).append("\n");
+        }
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(messageText.toString());
+
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline = new ArrayList<>();
+
+        if (clubsPage.hasPrevious()) {
+            var prevButton = new InlineKeyboardButton();
+            prevButton.setText("Previous");
+            prevButton.setCallbackData(PREV_BUTTON);
+            rowInline.add(prevButton);
+        }
+
+        if (clubsPage.hasNext()) {
+            var nextButton = new InlineKeyboardButton();
+            nextButton.setText("Next");
+            nextButton.setCallbackData(NEXT_BUTTON);
+            rowInline.add(nextButton);
+        }
+
+        rowsInline.add(rowInline);
+        markupInline.setKeyboard(rowsInline);
+        message.setReplyMarkup(markupInline);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error sending message: " + e.getMessage());
+        }
     }
 }

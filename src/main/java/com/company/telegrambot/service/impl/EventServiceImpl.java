@@ -1,12 +1,11 @@
-package com.company.telegrambot.service;
+package com.company.telegrambot.service.impl;
 
 import com.company.telegrambot.entity.Event;
 import com.company.telegrambot.repository.EventRepository;
+import com.company.telegrambot.service.EventService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties;
 import org.springframework.stereotype.Service;
 
-import java.awt.print.Pageable;
 import java.util.List;
 
 @Service
