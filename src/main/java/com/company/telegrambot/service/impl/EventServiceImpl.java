@@ -4,24 +4,25 @@ import com.company.telegrambot.entity.Event;
 import com.company.telegrambot.repository.EventRepository;
 import com.company.telegrambot.service.EventService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class EventServiceImpl implements EventService {
 
-    private final EventRepository repository;
+    private final EventRepository eventRepository;
 
 
     @Override
     public void addEvent(Event event) {
-        repository.save(event);
+        eventRepository.save(event);
     }
 
+
     @Override
-    public List<Event> getEvents() {
-       return repository.findAll();
+    public Page<Event> findAll(int page, int pageSize) {
+        return eventRepository.findAll(PageRequest.of(page, pageSize));
     }
 }

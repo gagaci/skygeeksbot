@@ -32,10 +32,6 @@ import java.util.List;
 @Slf4j
 public class TelegramBot extends TelegramLongPollingBot {
 
-    private static final String EVENT_BUTTON = "EVENT_BUTTON";
-    private static final String NO_BUTTON = "NO_BUTTON";
-
-    private static final String CLUBS_BUTTON = "CLUBS_BUTTON";
     private static final String NEXT_BUTTON = "NEXT_BUTTON";
     private static final String PREV_BUTTON = "PREV_BUTTON";
 
@@ -46,7 +42,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     private ClubService clubService;
 
     private int currentPage = 0;
-
 
     @Autowired
     private UserRepository userRepository;
@@ -72,13 +67,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         listOfCommands.add(new BotCommand("start", "get a welcome message"));
         listOfCommands.add(new BotCommand("events \uD83C\uDFB8", "get info about upcoming events "));
         listOfCommands.add(new BotCommand("clubs 🏇", "get info about clubs of the university"));
-        listOfCommands.add(new BotCommand("events", "get info about upcoming events vinland saga"));
+        listOfCommands.add(new BotCommand("events", "get info about upcoming events"));
         listOfCommands.add(new BotCommand("important_rooms", "delete my data"));
         listOfCommands.add(new BotCommand("help", "info how to use this bot"));
         try {
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
-            log.error("Error setting bot's command list: " + e.getMessage());
+            log.error("Error setting bot's command list: {}", e.getMessage());
         }
     }
 
@@ -104,10 +99,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                     registerUser(update.getMessage());
                     break;
                 case "/events":
-                    eventCommandReceived(chatId);
+                    eventCommandReceived(chatId, currentPage);
                     break;
                 case "events 🎸":  // Adjust this to match your button label
-                    eventCommandReceived(chatId);
+                    eventCommandReceived(chatId, currentPage);
                     break;
                 case "clubs 🏇":
                     clubCommandReceived(chatId, currentPage);
@@ -123,12 +118,20 @@ public class TelegramBot extends TelegramLongPollingBot {
             long chatId = update.getCallbackQuery().getMessage().getChatId();
             if (callbackData.equals(NEXT_BUTTON)) {
                 currentPage++;
-                clubCommandReceived(chatId, currentPage);
+                if (update.getCallbackQuery().getMessage().getText().startsWith("Events:")) {
+                    eventCommandReceived(chatId, currentPage);
+                } else if (update.getCallbackQuery().getMessage().getText().startsWith("Clubs:")) {
+                    clubCommandReceived(chatId, currentPage);
+                }
             } else if (callbackData.equals(PREV_BUTTON)) {
                 if (currentPage > 0) {
                     currentPage--;
                 }
-                clubCommandReceived(chatId, currentPage);
+                if (update.getCallbackQuery().getMessage().getText().startsWith("Events:")) {
+                    eventCommandReceived(chatId, currentPage);
+                } else if (update.getCallbackQuery().getMessage().getText().startsWith("Clubs:")) {
+                    clubCommandReceived(chatId, currentPage);
+                }
             }
 
 
@@ -142,23 +145,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         sendMessage(chatId, answer);
     }
 
-    private void eventCommandReceived(long chatId) {
-        createEvent();
-        createEvent();
-        createEvent();
-        var events = eventService.getEvents();
-
-        String temple = """
-                This is %s event
-                %s\s
-                Description : %s
-                Venue: %s
-                Date : %s
-                Organized by : %s""";
-        events.forEach(event -> sendMessage(chatId, String.format(temple, event.getEventType().toString(),
-                event.getTitle(), event.getDescription(), event.getVenue(), event.getDate().toString(), event.getEventOrganizedBy())));
-        log.info("Response Events {}",events);
-    }
 
     private void sendMessage(long chatId, String textToSend) {
         SendMessage message = new SendMessage();
@@ -216,34 +202,65 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    void createEvent() {
-        var event = new Event("Session With MR John", " this is event for freshmen and seniors", EventType.SOCIAL, "North hole room 412", LocalDate.now().plusDays(5), "SGA");
-        eventService.addEvent(event);
-    }
-    void createSpanishClub() {
-        var club = new Club("Spanish Club",
-                "Bienvenidos amigos! \uD83C\uDDEA\uD83C\uDDF8 Do you want to speak and communicate with Spanish speakers? Come to our classes",
-                "https://t.me/+FDo5gxtDQQowOWZi");
-        clubService.addClub(club);
-    }
-    void createArabicClub() {
-        var club = new Club("Arabic Club",
-                "! \uD83C\uDF19 Want to dive into the beauty of the Arabic language? Join our fun and interactive sessions with Mubina",
-                "https://t.me/arabicclubwut");
-        clubService.addClub(club);
-    }
-    void createGermanClub() {
-        var club = new Club("German Club",
-                "Hallo! \uD83C\uDF0D Join Bekzod in learning German and explore one of the most widely spoken languages in Europe",
-                "https://t.me/DeutschWebster");
-        clubService.addClub(club);
-    }
-
-
 
     @Override
     public String getBotUsername() {
         return config.getBotName();
+    }
+
+    private void eventCommandReceived(long chatId, int page) {
+        createEvent();
+        createEvent();
+        createEvent();
+        var events = eventService.findAll(page, 1);
+
+        StringBuilder messageText = new StringBuilder("Events:\n");
+
+        for (Event event : events) {
+            String temple = """
+                    This is %s event
+                    %s\s
+                    Description : %s
+                    Venue: %s
+                    Date : %s
+                    Organized by : %s""";
+
+            String message = String.format(temple, event.getEventType().toString(),
+                    event.getTitle(), event.getDescription(), event.getVenue(), event.getDate().toString(), event.getEventOrganizedBy());
+            messageText.append(message).append("\n");
+            log.info("Response Events {}", events);
+        }
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(messageText.toString());
+
+        InlineKeyboardMarkup markUpInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
+        List<InlineKeyboardButton> rowInLine = new ArrayList<>();
+
+        if (events.hasPrevious()) {
+            var prevButton = new InlineKeyboardButton();
+            prevButton.setText("Previous");
+            prevButton.setCallbackData(PREV_BUTTON);
+            rowInLine.add(prevButton);
+        }
+        if (events.hasNext()) {
+            var nextButton = new InlineKeyboardButton();
+            nextButton.setText("Next");
+            nextButton.setCallbackData(NEXT_BUTTON);
+            rowInLine.add(nextButton);
+        }
+        rowsInLine.add(rowInLine);
+        markUpInline.setKeyboard(rowsInLine);
+        message.setReplyMarkup(markUpInline);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error sending Events list: {}", e.getMessage());
+        }
+
     }
 
     private void clubCommandReceived(long chatId, int page) {
@@ -254,11 +271,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         StringBuilder messageText = new StringBuilder("Clubs:\n");
         for (Club club : clubsPage) {
             String temple = """
-                Club name : %s
-                Description : %s
-                Contact: %s""";
+                    Club name : %s
+                    Description : %s
+                    Contact: %s""";
             String message = String.format(temple, club.getName(), club.getDescription(), club.getContact());
             messageText.append(message).append("\n");
+            log.info("Response Clubs {}", club);
+
         }
 
         SendMessage message = new SendMessage();
@@ -290,7 +309,35 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(message);
         } catch (TelegramApiException e) {
-            log.error("Error sending message: " + e.getMessage());
+            log.error("Error sending Clubs list: {}", e.getMessage());
         }
+    }
+
+    //TEST event create
+    void createEvent() {
+        var event = new Event("Session With MR John", " this is event for freshmen and seniors", EventType.SOCIAL, "North hole room 412", LocalDate.now().plusDays(5), "SGA");
+        eventService.addEvent(event);
+    }
+
+    //TEST clubs create
+    void createSpanishClub() {
+        var club = new Club("Spanish Club",
+                "Bienvenido's amigos! \uD83C\uDDEA\uD83C\uDDF8 Do you want to speak and communicate with Spanish speakers? Come to our classes",
+                "https://t.me/+FDo5gxtDQQowOWZi");
+        clubService.addClub(club);
+    }
+
+    void createArabicClub() {
+        var club = new Club("Arabic Club",
+                "! \uD83C\uDF19 Want to dive into the beauty of the Arabic language? Join our fun and interactive sessions with Rubina",
+                "https://t.me/arabicclubwut");
+        clubService.addClub(club);
+    }
+
+    void createGermanClub() {
+        var club = new Club("German Club",
+                "Hallo! \uD83C\uDF0D Join Bekzod in learning German and explore one of the most widely spoken languages in Europe",
+                "https://t.me/DeutschWebster");
+        clubService.addClub(club);
     }
 }
