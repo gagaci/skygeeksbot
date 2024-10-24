@@ -1,11 +1,9 @@
 package com.company.telegrambot.service;
 
 import com.company.telegrambot.config.BotConfig;
-import com.company.telegrambot.entity.Club;
-import com.company.telegrambot.entity.Event;
-import com.company.telegrambot.entity.Professor;
-import com.company.telegrambot.entity.User;
+import com.company.telegrambot.entity.*;
 import com.company.telegrambot.enums.EventType;
+import com.company.telegrambot.enums.RoomType;
 import com.company.telegrambot.repository.UserRepository;
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +44,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     private ProfessorService professorService;
 
     @Autowired
+    private ImportantRoomsService importantRoomsService;
+
+    @Autowired
     private UserRepository userRepository;
 
     private int currentPage = 0;
@@ -72,6 +73,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         listOfCommands.add(new BotCommand("clubs 🏇", "get info about clubs of the university"));
         listOfCommands.add(new BotCommand("events", "get info about upcoming events"));
         listOfCommands.add(new BotCommand("professors 👩‍🏫", "get info about professor in the uni"));
+        listOfCommands.add(new BotCommand("important rooms ❕", "get info about important rooms in the uni"));
         listOfCommands.add(new BotCommand("help", "info how to use this bot"));
         try {
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
@@ -107,6 +109,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "professors 👩‍🏫":
                     professorCommandReceived(chatId, currentPage);
                     break;
+                    case "important rooms ❕":
+                    importantRoomsCommandReceived(chatId, currentPage);
+                    break;
                 case "clubs 🏇":
                     clubCommandReceived(chatId, currentPage);
                     break;
@@ -126,8 +131,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                     eventCommandReceived(chatId, currentPage);
                 } else if (determiner.startsWith("Clubs:")) {
                     clubCommandReceived(chatId, currentPage);
-                }else if (determiner.startsWith("Professors:")) {
+                } else if (determiner.startsWith("Professors:")) {
                     professorCommandReceived(chatId, currentPage);
+                }else if (determiner.startsWith("Important rooms:")) {
+                    importantRoomsCommandReceived(chatId, currentPage);
                 }
             } else if (callbackData.equals(PREV_BUTTON)) {
                 if (currentPage > 0) {
@@ -137,8 +144,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                     eventCommandReceived(chatId, currentPage);
                 } else if (determiner.startsWith("Clubs:")) {
                     clubCommandReceived(chatId, currentPage);
-                }else if (determiner.startsWith("Professors:")) {
+                } else if (determiner.startsWith("Professors:")) {
                     professorCommandReceived(chatId, currentPage);
+                }else if (determiner.startsWith("Important rooms:")) {
+                    importantRoomsCommandReceived(chatId, currentPage);
                 }
             }
 
@@ -292,6 +301,27 @@ public class TelegramBot extends TelegramLongPollingBot {
             messageText.append(message).append("\n");
             log.info("Response Events {}", events);
         }
+    }
+
+    private void importantRoomsCommandReceived(long chatId, int page) {
+        createImportantRoom();
+        createImportantRoom();
+        createImportantRoom();
+        var importantRooms = importantRoomsService.findAll(page, 1);
+
+        StringBuilder messageText = new StringBuilder("Important rooms:\n");
+
+        for (ImportantRoom importantRoom : importantRooms) {
+            String temple = """
+                    The room location: %s
+                    Responsibility of the room: %s\s
+                    Room type: %s
+                    Floor: %s""";
+
+            String message = String.format(temple,importantRoom.getLocation(),importantRoom.getResponsibility(),importantRoom.getRoomType(),importantRoom.getFloorNumber());
+            messageText.append(message).append("\n");
+            log.info("Response Important rooms {}", importantRooms.getTotalElements());
+        }
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
@@ -301,13 +331,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
         List<InlineKeyboardButton> rowInLine = new ArrayList<>();
 
-        if (events.hasPrevious()) {
+        if (importantRooms.hasPrevious()) {
             var prevButton = new InlineKeyboardButton();
             prevButton.setText("Previous");
             prevButton.setCallbackData(PREV_BUTTON);
             rowInLine.add(prevButton);
         }
-        if (events.hasNext()) {
+        if (importantRooms.hasNext()) {
             var nextButton = new InlineKeyboardButton();
             nextButton.setText("Next");
             nextButton.setCallbackData(NEXT_BUTTON);
@@ -375,6 +405,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /// TEST create an important
+    private void createImportantRoom() {
+        var importantRoom = new ImportantRoom("on the left-hand of hall", "Avising room", RoomType.ADMINISTRATIVE, 2);
+        importantRoomsService.addRoom(importantRoom);
+    }
+
     /// TEST professor create
     private void createProfessor() {
         var professor = new Professor("Bayramov Xabibulloh",
@@ -383,13 +419,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         professorService.addProfessor(professor);
     }
 
-    //TEST event create
+    /// TEST event create
     void createEvent() {
         var event = new Event("Session With MR John", " this is event for freshmen and seniors", EventType.SOCIAL, "North hole room 412", LocalDate.now().plusDays(5), "SGA");
         eventService.addEvent(event);
     }
 
-    //TEST clubs create
+    /// TEST clubs create
     void createSpanishClub() {
         var club = new Club("Spanish Club",
                 "Bienvenido's amigos! \uD83C\uDDEA\uD83C\uDDF8 Do you want to speak and communicate with Spanish speakers? Come to our classes",

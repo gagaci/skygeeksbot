@@ -3,22 +3,24 @@ package com.company.telegrambot.entity;
 import com.company.telegrambot.enums.RoomType;
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
 @Getter
 @Setter
 @Table(name = "important_rooms")
+@NoArgsConstructor
 public class ImportantRoom {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "location",nullable = false)
+    @Column(name = "location", nullable = false)
     private String location;
 
-    @Column(name = "responsibility",nullable = false)
+    @Column(name = "responsibility", nullable = false)
     private String responsibility;
 
 
@@ -27,9 +29,14 @@ public class ImportantRoom {
     private RoomType roomType;
 
 
-    @Column(name = "floor_number",nullable = false)
+    @Column(name = "floor_number", nullable = false)
     private Integer floorNumber;
 
-    @Column(name = "building_name",nullable = false)
-    private String buildingName;
+
+    public ImportantRoom(String location, String responsibility, RoomType roomType, Integer floorNumber) {
+        this.location = location;
+        this.responsibility = responsibility;
+        this.roomType = roomType;
+        this.floorNumber = floorNumber;
+    }
 }
