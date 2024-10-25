@@ -6,10 +6,10 @@ spring:
         name: telegram-bot
     datasource:
         driver-class-name: org.postgresql.Driver
-        url: jdbc:postgresql://localhost:5432/on-boarding
-        username: postgres
-        password: 0505
+        url: jdbc:postgresql://ash-fairy-4221.j77.aws-ap-southeast-1.cockroachlabs.cloud:26257/postgres
+        username: khabib
+        password: dG-cxrUq2a0m_Xr3r3uO6A
     jpa:
         hibernate:
-            ddl-auto: create-drop
+            ddl-auto: update
         show-sql: true

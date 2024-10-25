@@ -35,6 +35,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     private static final String PREV_BUTTON = "PREV_BUTTON";
 
     @Autowired
+    private CampusFacilityService campusFacilityService;
+
+    @Autowired
     private EventService eventService;
 
     @Autowired
@@ -73,6 +76,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         listOfCommands.add(new BotCommand("clubs 🏇", "get info about clubs of the university"));
         listOfCommands.add(new BotCommand("events", "get info about upcoming events"));
         listOfCommands.add(new BotCommand("professors 👩‍🏫", "get info about professor in the uni"));
+        listOfCommands.add(new BotCommand("university facilities 🧘‍♂️", "get info about campus facilities   "));
         listOfCommands.add(new BotCommand("important rooms ❕", "get info about important rooms in the uni"));
         listOfCommands.add(new BotCommand("help", "info how to use this bot"));
         try {
@@ -109,11 +113,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "professors 👩‍🏫":
                     professorCommandReceived(chatId, currentPage);
                     break;
-                    case "important rooms ❕":
+                case "important rooms ❕":
                     importantRoomsCommandReceived(chatId, currentPage);
                     break;
                 case "clubs 🏇":
                     clubCommandReceived(chatId, currentPage);
+                    break;
+                case "university facilities 🧘‍♂️":
+                    campusFacilityCommandReceived(chatId, currentPage);
                     break;
                 case "/help":
                     sendMessage(chatId, HELP_TEXT);
@@ -133,8 +140,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                     clubCommandReceived(chatId, currentPage);
                 } else if (determiner.startsWith("Professors:")) {
                     professorCommandReceived(chatId, currentPage);
-                }else if (determiner.startsWith("Important rooms:")) {
+                } else if (determiner.startsWith("Important rooms:")) {
                     importantRoomsCommandReceived(chatId, currentPage);
+                } else if (determiner.startsWith("Campus facilities:")) {
+                    campusFacilityCommandReceived(chatId, currentPage);
                 }
             } else if (callbackData.equals(PREV_BUTTON)) {
                 if (currentPage > 0) {
@@ -146,8 +155,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                     clubCommandReceived(chatId, currentPage);
                 } else if (determiner.startsWith("Professors:")) {
                     professorCommandReceived(chatId, currentPage);
-                }else if (determiner.startsWith("Important rooms:")) {
-                    importantRoomsCommandReceived(chatId, currentPage);
+                } else if (determiner.startsWith("Campus facilities:")) {
+                    campusFacilityCommandReceived(chatId, currentPage);
                 }
             }
 
@@ -188,7 +197,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         row.add("professors 👩‍🏫");
         row.add("clubs 🏇");
-        row.add("university facilities  \uD83E\uDDD8\uD83C\uDFFB\u200D♂️");
+        row.add("university facilities 🧘‍♂️");
 
         keyboardRows.add(row);
 
@@ -281,8 +290,6 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void eventCommandReceived(long chatId, int page) {
         createEvent();
-        createEvent();
-        createEvent();
         var events = eventService.findAll(page, 1);
 
         StringBuilder messageText = new StringBuilder("Events:\n");
@@ -301,6 +308,36 @@ public class TelegramBot extends TelegramLongPollingBot {
             messageText.append(message).append("\n");
             log.info("Response Events {}", events);
         }
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(messageText.toString());
+
+        InlineKeyboardMarkup markUpInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
+        List<InlineKeyboardButton> rowInLine = new ArrayList<>();
+
+        if (events.hasPrevious()) {
+            var prevButton = new InlineKeyboardButton();
+            prevButton.setText("Previous");
+            prevButton.setCallbackData(PREV_BUTTON);
+            rowInLine.add(prevButton);
+        }
+        if (events.hasNext()) {
+            var nextButton = new InlineKeyboardButton();
+            nextButton.setText("Next");
+            nextButton.setCallbackData(NEXT_BUTTON);
+            rowInLine.add(nextButton);
+        }
+        rowsInLine.add(rowInLine);
+        markUpInline.setKeyboard(rowsInLine);
+        message.setReplyMarkup(markUpInline);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error sending Events list: {}", e.getMessage());
+        }
+
     }
 
     private void importantRoomsCommandReceived(long chatId, int page) {
@@ -318,7 +355,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     Room type: %s
                     Floor: %s""";
 
-            String message = String.format(temple,importantRoom.getLocation(),importantRoom.getResponsibility(),importantRoom.getRoomType(),importantRoom.getFloorNumber());
+            String message = String.format(temple, importantRoom.getLocation(), importantRoom.getResponsibility(), importantRoom.getRoomType(), importantRoom.getFloorNumber());
             messageText.append(message).append("\n");
             log.info("Response Important rooms {}", importantRooms.getTotalElements());
         }
@@ -350,10 +387,61 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(message);
         } catch (TelegramApiException e) {
-            log.error("Error sending Events list: {}", e.getMessage());
+            log.error("Error sending Important rooms list: {}", e.getMessage());
         }
 
     }
+
+    private void campusFacilityCommandReceived(long chatId, int page) {
+        createGymFacility();
+        createTherapistFacility();
+        createFoodCourtFacility();
+        var facilityPage = campusFacilityService.findAll(page, 1);
+        StringBuilder messageText = new StringBuilder("Campus facilities:\n");
+        for (CampusFacility facility : facilityPage) {
+            String temple = """
+                    Facility : %s
+                    Location : %s
+                    Contact: %s""";
+            String message = String.format(temple, facility.getFacility(), facility.getLocation(), facility.getContact());
+            messageText.append(message).append("\n");
+            log.info("Response Facilities {}", facilityPage);
+
+        }
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(messageText.toString());
+
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline = new ArrayList<>();
+
+        if (facilityPage.hasPrevious()) {
+            var prevButton = new InlineKeyboardButton();
+            prevButton.setText("Previous");
+            prevButton.setCallbackData(PREV_BUTTON);
+            rowInline.add(prevButton);
+        }
+
+        if (facilityPage.hasNext()) {
+            var nextButton = new InlineKeyboardButton();
+            nextButton.setText("Next");
+            nextButton.setCallbackData(NEXT_BUTTON);
+            rowInline.add(nextButton);
+        }
+
+        rowsInline.add(rowInline);
+        markupInline.setKeyboard(rowsInline);
+        message.setReplyMarkup(markupInline);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error sending Facilities list: {}", e.getMessage());
+        }
+    }
+
 
     private void clubCommandReceived(long chatId, int page) {
         createSpanishClub();
@@ -401,8 +489,25 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(message);
         } catch (TelegramApiException e) {
-            log.error("Error sending Clubs list: {}", e.getMessage());
+            log.error("Error sending Campus Facility list: {}", e.getMessage());
         }
+    }
+
+    /// TEST create campus facilities
+
+    private void createGymFacility() {
+        var facility = new CampusFacility("Gym facility", "North Hall floor 2, room 5", "@username");
+        campusFacilityService.addFacility(facility);
+    }
+
+    private void createTherapistFacility() {
+        var facility = new CampusFacility("Therapist facility", "North Hall floor 2, room 5", "@username");
+        campusFacilityService.addFacility(facility);
+    }
+
+    private void createFoodCourtFacility() {
+        var facility = new CampusFacility("Food Court", "North Hall floor 2, room 5", "@username");
+        campusFacilityService.addFacility(facility);
     }
 
     /// TEST create an important
