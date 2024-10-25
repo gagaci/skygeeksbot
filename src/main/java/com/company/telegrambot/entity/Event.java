@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -17,27 +16,26 @@ import java.time.LocalDateTime;
 public class Event {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Integer id;
 
-
-    @Column(name = "title",nullable = false)
+    @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "description",nullable = false)
+    @Column(name = "description", nullable = false)
     private String description;
 
     @Column(name = "event_type", nullable = false)
     @Enumerated(value = EnumType.STRING)
     private EventType eventType;
 
-    @Column(name = "venue",nullable = false)
+    @Column(name = "venue", nullable = false)
     private String venue;
 
-    @Column(name = "date",nullable = false)
+    @Column(name = "date", nullable = false)
     private LocalDate date;
 
-    @Column(name = "event_organized_by",nullable = false)
+    @Column(name = "event_organized_by", nullable = false)
     private String eventOrganizedBy;
 
 

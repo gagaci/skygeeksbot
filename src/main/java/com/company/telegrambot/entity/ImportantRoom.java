@@ -14,7 +14,7 @@ import lombok.Setter;
 public class ImportantRoom {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Integer id;
 
     @Column(name = "location", nullable = false)
