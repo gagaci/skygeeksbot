@@ -1,6 +1,7 @@
 package com.company.telegrambot.service.impl;
 
 import com.company.telegrambot.entity.Event;
+import com.company.telegrambot.enums.EventType;
 import com.company.telegrambot.repository.EventRepository;
 import com.company.telegrambot.service.EventService;
 import lombok.RequiredArgsConstructor;
@@ -24,5 +25,10 @@ public class EventServiceImpl implements EventService {
     @Override
     public Page<Event> findAll(int page, int pageSize) {
         return eventRepository.findAll(PageRequest.of(page, pageSize));
+    }
+
+    @Override
+    public Page<Event> findAllSocialEvents(int page, int pageSize, EventType eventType) {
+        return eventRepository.findAllByEventType(PageRequest.of(page, pageSize), eventType);
     }
 }

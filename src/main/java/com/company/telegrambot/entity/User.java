@@ -1,5 +1,6 @@
 package com.company.telegrambot.entity;
 
+import com.company.telegrambot.enums.State;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,14 +18,17 @@ import java.time.LocalDateTime;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long chatId;
 
     @Column(name = "firtname",nullable = false)
     private String firstName;
 
+    @Column(name = "state")
+    private State state = State.NEW;
 
     private LocalDateTime registeredAt;
+
+
 
     @Override
     public String toString() {

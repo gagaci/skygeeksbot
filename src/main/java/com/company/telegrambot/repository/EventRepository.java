@@ -1,6 +1,7 @@
 package com.company.telegrambot.repository;
 
 import com.company.telegrambot.entity.Event;
+import com.company.telegrambot.enums.EventType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,4 +13,6 @@ public interface EventRepository extends CrudRepository<Event, Integer>, JpaRepo
 
     @Override
     Page<Event> findAll(Pageable pageable);
+
+    Page<Event> findAllByEventType(Pageable pageable, EventType eventType);
 }
