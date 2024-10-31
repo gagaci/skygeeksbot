@@ -8,5 +8,6 @@ public enum State {
     ROOMS,
     PROFESSORS,
     FACILITIES,
-    QUESTION
+    QUESTION,
+    FAQ
 }
