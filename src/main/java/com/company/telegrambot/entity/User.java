@@ -24,6 +24,7 @@ public class User {
     private String firstName;
 
     @Column(name = "state")
+    @Enumerated(value = EnumType.STRING)
     private State state = State.NEW;
 
     private LocalDateTime registeredAt;
