@@ -6,9 +6,12 @@ import lombok.Getter;
 @Data
 @Getter
 public class Utils {
-    public static String CLUBS = "clubs 🏇";
-    public static String EVENTS = "events 🎸";
-    public static String ROOMS = "important rooms 🔭";
-    public static String PROFESSORS = "professors 👩‍🏫";
-    public static String FACILITIES = "university facilities 🧘‍♂️";
+    public static String CLUBS = "Clubs 🏇";
+    public static String EVENTS = "Events 🎸";
+    public static String ROOMS = "Important rooms ❕";
+    public static String PROFESSORS = "Professors 👩‍🏫";
+    public static String FACILITIES = "University facilities 🧘‍♂️";
+    public static String BACK = "Back ↩️";
+
+    public static String professorKHPhoto = "AgACAgIAAxkDAAIG-GcjehB154AHsQHjXh1NtjlbhGiEAAJw4jEb5VEYSS35SnAfQPQ9AQADAgADeAADNgQ";
 }

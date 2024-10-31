@@ -21,6 +21,8 @@ public class Professor {
     @Column(name = "full_name",nullable = false)
     private String fullName;
 
+    @Column(name = "photo_id",nullable = false)
+    private String photoId;
 
     @Column(name = "background",nullable = false)
     private String background;
@@ -31,8 +33,10 @@ public class Professor {
     @Column(name = "email",nullable = false)
     private String email;
 
-    public Professor(String fullName, String background, String linkedInAccount, String email) {
+
+    public Professor(String fullName, String photoId, String background, String linkedInAccount, String email) {
         this.fullName = fullName;
+        this.photoId = photoId;
         this.background = background;
         this.linkedInAccount = linkedInAccount;
         this.email = email;
