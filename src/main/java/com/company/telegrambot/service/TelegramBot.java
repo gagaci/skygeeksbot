@@ -65,6 +65,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Autowired
     private QuestionService questionService;
 
+    @Autowired
+    private FAQService faqService;
+
     private int currentPage = 0;
 
 
@@ -141,6 +144,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                         case QUESTION:
                             questionState(messageText, chatId);
                             break;
+                        case FAQ:
+                            faqState(messageText, chatId);
+                            break;
                     }
             }
 
@@ -171,6 +177,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                     allRoomsReceived(chatId, currentPage);
                 } else if (determiner.startsWith("Campus facilities:")) {
                     allFacilitiesReceived(chatId, currentPage);
+                } else if (determiner.startsWith("FAQ:")) {
+                    allFaqReceived(chatId, currentPage);
                 }
             } else if (callbackData.equals(PREV_BUTTON)) {
                 if (currentPage > 0) {
@@ -196,6 +204,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                     allFacilitiesReceived(chatId, currentPage);
                 } else if (determiner.startsWith("Important rooms:")) {
                     allRoomsReceived(chatId, currentPage);
+                } else if (determiner.startsWith("FAQ:")) {
+                    allFaqReceived(chatId, currentPage);
                 }
             }
 
@@ -226,6 +236,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                 break;
             case "leave a question":
                 questionCommandReceived(chatId);
+                break;
+            case "FAQ":
+                faqReceived(chatId);
                 break;
             case "/help":
                 sendMessage(chatId, HELP_TEXT);
@@ -324,10 +337,17 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void acceptQuestion(String messageText, long chatId) {
-        questionService.addQuestion(messageText, chatId);
-        sendMessage(chatId, "Your question has been accepted and, we will keep in touch soon !");
-        sendHomeMessage(chatId, "");
+    private void faqState(String messageText, long chatId) {
+        switch (messageText) {
+            case "all":
+                allFaqReceived(chatId, currentPage);
+                break;
+            case "back ↩️":
+                sendHomeMessage(chatId, "");
+                break;
+            default:
+                sendMessage(chatId, "Sorry, command was not recognized");
+        }
     }
 
 
@@ -358,6 +378,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         row.add("professors 👩‍🏫");
         row.add(Utils.CLUBS);
+        row.add("FAQ");
         row.add("university facilities 🧘‍♂️");
 
         keyboardRows.add(row);
@@ -513,6 +534,36 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<KeyboardRow> keyboardRows = new ArrayList<>();
 
         KeyboardRow row = new KeyboardRow();
+        row.add("back ↩️");
+
+        keyboardRows.add(row);
+
+
+        keyboardMarkup.setKeyboard(keyboardRows);
+
+        message.setReplyMarkup(keyboardMarkup);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void sendFaqMessage(long chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText("Select option:");
+
+
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        keyboardMarkup.setResizeKeyboard(true);
+        keyboardMarkup.setOneTimeKeyboard(false);
+
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+
+        KeyboardRow row = new KeyboardRow();
+        row.add("all");
         row.add("back ↩️");
 
         keyboardRows.add(row);
@@ -1015,11 +1066,65 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+
+    private void faqReceived(long chatId) {
+        sendFaqMessage(chatId);
+        userService.setState(chatId, State.FAQ);
+    }
+
+    private void allFaqReceived(long chatId, int page) {
+
+        var faqs = faqService.findAll(page, 1);
+        StringBuilder messageText = new StringBuilder("FAQ:\n");
+        for (FAQ faq : faqs) {
+            String temple = """
+                    Question : %s
+                    Answer : %s""";
+            String message = String.format(temple, faq.getQuestion(), faq.getAnswer());
+            messageText.append(message).append("\n");
+            log.info("Response FAQ {}", faqs);
+
+        }
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(messageText.toString());
+
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline = new ArrayList<>();
+
+        if (faqs.hasPrevious()) {
+            var prevButton = new InlineKeyboardButton();
+            prevButton.setText("Previous");
+            prevButton.setCallbackData(PREV_BUTTON);
+            rowInline.add(prevButton);
+        }
+
+        if (faqs.hasNext()) {
+            var nextButton = new InlineKeyboardButton();
+            nextButton.setText("Next");
+            nextButton.setCallbackData(NEXT_BUTTON);
+            rowInline.add(nextButton);
+        }
+
+        rowsInline.add(rowInline);
+        markupInline.setKeyboard(rowsInline);
+        message.setReplyMarkup(markupInline);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error sending FAQ list: {}", e.getMessage());
+        }
+
+    }
+
+
     private void professorCommandReceived(long chatId) {
 
         sendProfessorMessage(chatId);
         userService.setState(chatId, State.PROFESSORS);
-
 
     }
 
@@ -1133,6 +1238,12 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void campusFacilityCommandReceived(long chatId) {
         sendFacilityMessage(chatId);
         userService.setState(chatId, State.FACILITIES);
+    }
+
+    private void acceptQuestion(String messageText, long chatId) {
+        questionService.addQuestion(messageText, chatId);
+        sendMessage(chatId, "Your question has been accepted and, we will keep in touch soon !");
+        sendHomeMessage(chatId, "");
     }
 
 

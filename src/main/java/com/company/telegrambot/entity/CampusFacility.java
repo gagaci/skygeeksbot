@@ -16,7 +16,6 @@ public class CampusFacility {
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Integer id;
 
-
     @Column(name = "facility", nullable = false)
     private String facility;
 
