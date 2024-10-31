@@ -7,5 +7,6 @@ public enum State {
     CLUBS,
     ROOMS,
     PROFESSORS,
-    FACILITIES
+    FACILITIES,
+    QUESTION
 }

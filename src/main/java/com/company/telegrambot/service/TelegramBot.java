@@ -62,6 +62,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Autowired
     private GeneratorClub generatorClub;
 
+    @Autowired
+    private QuestionService questionService;
+
     private int currentPage = 0;
 
 
@@ -134,6 +137,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                             break;
                         case ROOMS:
                             roomState(messageText, chatId);
+                            break;
+                        case QUESTION:
+                            questionState(messageText, chatId);
                             break;
                     }
             }
@@ -217,6 +223,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                 break;
             case "university facilities 🧘‍♂️":
                 campusFacilityCommandReceived(chatId);
+                break;
+            case "leave a question":
+                questionCommandReceived(chatId);
                 break;
             case "/help":
                 sendMessage(chatId, HELP_TEXT);
@@ -307,6 +316,20 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    private void questionState(String messageText, long chatId) {
+        if (messageText.equals("back ↩️")) {
+            sendHomeMessage(chatId, "");
+        } else {
+            acceptQuestion(messageText, chatId);
+        }
+    }
+
+    private void acceptQuestion(String messageText, long chatId) {
+        questionService.addQuestion(messageText, chatId);
+        sendMessage(chatId, "Your question has been accepted and, we will keep in touch soon !");
+        sendHomeMessage(chatId, "");
+    }
+
 
     public void sendHomeMessage(long chatId, String username) {
         SendMessage message = new SendMessage();
@@ -326,6 +349,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         KeyboardRow row = new KeyboardRow();
 
         row.add(Utils.EVENTS);
+        row.add("leave a question");
         row.add("important rooms ❕");
 
         keyboardRows.add(row);
@@ -475,6 +499,36 @@ public class TelegramBot extends TelegramLongPollingBot {
             throw new RuntimeException(e);
         }
     }
+
+    private void sendQuestionMessage(long chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText("Write your question down:");
+
+
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        keyboardMarkup.setResizeKeyboard(true);
+        keyboardMarkup.setOneTimeKeyboard(false);
+
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+
+        KeyboardRow row = new KeyboardRow();
+        row.add("back ↩️");
+
+        keyboardRows.add(row);
+
+
+        keyboardMarkup.setKeyboard(keyboardRows);
+
+        message.setReplyMarkup(keyboardMarkup);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private void sendRoomMessage(long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
@@ -531,6 +585,13 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Override
     public String getBotUsername() {
         return config.getBotName();
+    }
+
+    /// QUESTION
+    private void questionCommandReceived(long chatId) {
+        sendQuestionMessage(chatId);
+        userService.setState(chatId, State.QUESTION);
+
     }
 
 
@@ -1062,9 +1123,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             log.error("Error sending Important rooms list: {}", e.getMessage());
         }
     }
+
     private void importantRoomsCommandReceived(long chatId) {
         sendRoomMessage(chatId);
-        userService.setState(chatId,State.ROOMS);
+        userService.setState(chatId, State.ROOMS);
     }
 
 
