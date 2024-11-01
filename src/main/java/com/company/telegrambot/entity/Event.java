@@ -42,9 +42,10 @@ public class Event {
     private String eventOrganizedBy;
 
 
-    public Event(String title, String description, EventType eventType, String venue, LocalDate date, String eventOrganizedBy) {
+    public Event(String title, String description, String photoId, EventType eventType, String venue, LocalDate date, String eventOrganizedBy) {
         this.title = title;
         this.description = description;
+        this.photoId = photoId;
         this.eventType = eventType;
         this.venue = venue;
         this.date = date;
