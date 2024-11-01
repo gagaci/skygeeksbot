@@ -19,6 +19,9 @@ public class CampusFacility {
     @Column(name = "facility", nullable = false)
     private String facility;
 
+    @Column(name = "photo_id", nullable = false)
+    private String photoId;
+
     @Column(name = "location", nullable = false)
     private String location;
 

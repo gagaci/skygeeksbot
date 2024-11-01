@@ -23,6 +23,9 @@ public class Club {
     @Column(name = "club_type", nullable = false)
     private ClubType clubType;
 
+    @Column(name = "photo_id", nullable = false)
+    private String photoId;
+
     @Column(name = "description", nullable = false)
     private String description;
 
@@ -35,9 +38,10 @@ public class Club {
     @Column(name = "contact", nullable = false)
     private String contact;
 
-    public Club(String name, ClubType clubType, String description, String founder, String founderContact, String contact) {
+    public Club(String name, ClubType clubType, String photoId, String description, String founder, String founderContact, String contact) {
         this.name = name;
         this.clubType = clubType;
+        this.photoId = photoId;
         this.description = description;
         this.founder = founder;
         this.founderContact = founderContact;

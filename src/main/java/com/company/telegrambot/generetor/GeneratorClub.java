@@ -15,35 +15,30 @@ public class GeneratorClub {
    public void createSpanishClub() {
         var club = new Club("Spanish Club",
                 ClubType.LANGUAGE,
+                "AgACAgIAAxkDAAIHj2ckqHpJgC5MOUM3nHT7LXN4ZMSEAAJM4DEb5VEgScVj3WxUkc9QAQADAgADeQADNgQ",
                 "Bienvenido's amigos! \uD83C\uDDEA\uD83C\uDDF8 Do you want to speak and communicate with Spanish speakers? Come to our classes",
-                "Ng",
+                "Nigina",
                 "@username",
                 "https://t.me/+FDo5gxtDQQowOWZi");
         clubService.addClub(club);
     }
 
-  public   void createDotaClub() {
-        var club = new Club("Dota Club",
+  public   void createCyberSportClub() {
+        var club = new Club("Cyber sport club",
                 ClubType.GAME,
-                "Bienvenido's amigos! \uD83C\uDDEA\uD83C\uDDF8 Do you want to speak and communicate with Spanish speakers? Come to our classes",
+                "AgACAgIAAxkDAAIHjmckqDDpCM1DU_KD1wABzQxi7LsIrAACSeAxG-VRIEkHJ5uH9dR7OQEAAwIAA3kAAzYE",
+                "Calling all gamers! \uD83C\uDFAE Join Anvar’s Cyber Sport club and compete in the world of e-sports!",
                 "Abdullu",
                 "@username",
-                "Dota");
+                "https://t.me/webstercybersport");
         clubService.addClub(club);
     }
-  public   void createCSClub() {
-        var club = new Club("CS Club",
-                ClubType.GAME,
-                "Bienvenido's amigos! \uD83C\uDDEA\uD83C\uDDF8 Do you want to speak and communicate with Spanish speakers? Come to our classes",
-                "Abdullu",
-                "@username",
-                "cs");
-        clubService.addClub(club);
-    }
+
 
    public void createArabicClub() {
         var club = new Club("Arabic Club",
                 ClubType.LANGUAGE,
+                "AgACAgIAAxkDAAIHkGckqKERHfynZllU8fWy6zYZPReTAAJO4DEb5VEgSaevKDWR5VYrAQADAgADeQADNgQ",
                 "! \uD83C\uDF19 Want to dive into the beauty of the Arabic language? Join our fun and interactive sessions with Rubina",
                 "Mubina",
                 "@username",
@@ -51,13 +46,27 @@ public class GeneratorClub {
         clubService.addClub(club);
     }
 
-   public void createGermanClub() {
-        var club = new Club("German Club",
-                ClubType.LANGUAGE,
-                "Hallo! \uD83C\uDF0D Join Bekzod in learning German and explore one of the most widely spoken languages in Europe",
-                "Beka",
+    public void createSelfDefenceClub() {
+        var club = new Club("Self Defense Club",
+                ClubType.SPORT,
+                "AgACAgIAAxkDAAIHrWckqxaeTEzKDc9B1FqBQkznrUQyAAKD4DEb5VEgSZvNpw690IYkAQADAgADeQADNgQ",
+                "Empower yourself with self-defense skills! \uD83E\uDD4B Join Alan’s sessions and feel confident and strong",
+                "John",
                 "@username",
-                "https://t.me/DeutschWebster");
+                "https://t.me/+RO1BrZk8HqU2YWEy");
         clubService.addClub(club);
     }
+    public void createFilmMakingClub() {
+        var club = new Club("Filmmaking and Photography Club",
+                ClubType.OTHER,
+                "AgACAgIAAxkDAAIHrmckq1UoIKpE417t4Vw3pIzVb14nAAKP4DEb5VEgSfEU1vfVHbY2AQADAgADeAADNgQ",
+                "Lights, camera, action! \uD83C\uDFA5 Join Malika in capturing stories through filmmaking and photography at Webster.g",
+                "Abdulaziz",
+                "@username",
+                "https://t.me/Webster_filmmaking");
+        clubService.addClub(club);
+    }
+
+
+
 }

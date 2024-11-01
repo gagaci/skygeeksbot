@@ -25,6 +25,9 @@ public class Event {
     @Column(name = "description", nullable = false)
     private String description;
 
+    @Column(name = "photo_id", nullable = false)
+    private String photoId;
+
     @Column(name = "event_type", nullable = false)
     @Enumerated(value = EnumType.STRING)
     private EventType eventType;
