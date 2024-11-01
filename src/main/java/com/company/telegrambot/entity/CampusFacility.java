@@ -28,8 +28,9 @@ public class CampusFacility {
     @Column(name = "contact", nullable = false)
     private String contact;
 
-    public CampusFacility(String facility, String location, String contact) {
+    public CampusFacility(String facility, String photoId, String location, String contact) {
         this.facility = facility;
+        this.photoId = photoId;
         this.location = location;
         this.contact = contact;
     }
