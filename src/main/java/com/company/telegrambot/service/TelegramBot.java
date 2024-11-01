@@ -191,6 +191,15 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "facilities":
                     allFacilitiesReceived(chatId, Integer.parseInt(item));
                     break;
+                case "social events":
+                    socialEventCommandReceived(chatId,Integer.parseInt(item));
+                    break;
+                case "academic events":
+                    academicEventCommandReceived(chatId, Integer.parseInt(item));
+                    break;
+                case "orientation events":
+                    orientationEventCommandReceived(chatId, Integer.parseInt(item));
+                    break;
             }
 
             if (callbackData.equals(NEXT_BUTTON)) {
@@ -701,10 +710,11 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void socialEventCommandReceived(long chatId, int page) {
+
         var events = eventService.findAllSocialEvents(page, 1, EventType.SOCIAL);
 
         StringBuilder messageText = new StringBuilder("Social events:\n");
-
+        SendPhoto msg = new SendPhoto();
         for (Event event : events) {
             String temple = """
                     This is %s event
@@ -717,11 +727,11 @@ public class TelegramBot extends TelegramLongPollingBot {
             String message = String.format(temple, event.getEventType().toString().toLowerCase(),
                     event.getTitle(), event.getDescription(), event.getVenue(), event.getDate().toString(), event.getEventOrganizedBy());
             messageText.append(message).append("\n");
+            msg.setPhoto(new InputFile(event.getPhotoId()));
             log.info("Response Social Events {}", events);
         }
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString());
+        msg.setChatId(String.valueOf(chatId));
+        msg.setCaption(messageText.toString());
 
         InlineKeyboardMarkup markUpInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
@@ -730,21 +740,21 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (events.hasPrevious()) {
             var prevButton = new InlineKeyboardButton();
             prevButton.setText("Previous");
-            prevButton.setCallbackData(PREV_BUTTON);
+            prevButton.setCallbackData("social events:" + events.previousPageable().getPageNumber());
             rowInLine.add(prevButton);
         }
         if (events.hasNext()) {
             var nextButton = new InlineKeyboardButton();
             nextButton.setText("Next");
-            nextButton.setCallbackData(NEXT_BUTTON);
+            nextButton.setCallbackData("social events:" + events.nextPageable().getPageNumber());
             rowInLine.add(nextButton);
         }
         rowsInLine.add(rowInLine);
         markUpInline.setKeyboard(rowsInLine);
-        message.setReplyMarkup(markUpInline);
+        msg.setReplyMarkup(markUpInline);
 
         try {
-            execute(message);
+            execute(msg);
         } catch (TelegramApiException e) {
             log.error("Error sending social events list: {}", e.getMessage());
         }
@@ -754,7 +764,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         var events = eventService.findAllSocialEvents(page, 1, EventType.ACADEMIC);
 
         StringBuilder messageText = new StringBuilder("Academic events:\n");
-
+        SendPhoto msg = new SendPhoto();
         for (Event event : events) {
             String temple = """
                     This is %s event
@@ -766,12 +776,12 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             String message = String.format(temple, event.getEventType().toString().toLowerCase(),
                     event.getTitle(), event.getDescription(), event.getVenue(), event.getDate().toString(), event.getEventOrganizedBy());
+            msg.setPhoto(new InputFile(event.getPhotoId()));
             messageText.append(message).append("\n");
             log.info("Response Academic Events {}", events);
         }
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString());
+        msg.setChatId(String.valueOf(chatId));
+        msg.setCaption(messageText.toString());
 
         InlineKeyboardMarkup markUpInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
@@ -780,21 +790,21 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (events.hasPrevious()) {
             var prevButton = new InlineKeyboardButton();
             prevButton.setText("Previous");
-            prevButton.setCallbackData(PREV_BUTTON);
+            prevButton.setCallbackData("academic events:" + events.previousPageable().getPageNumber());
             rowInLine.add(prevButton);
         }
         if (events.hasNext()) {
             var nextButton = new InlineKeyboardButton();
             nextButton.setText("Next");
-            nextButton.setCallbackData(NEXT_BUTTON);
+            nextButton.setCallbackData("academic events:" + events.nextPageable().getPageNumber());
             rowInLine.add(nextButton);
         }
         rowsInLine.add(rowInLine);
         markUpInline.setKeyboard(rowsInLine);
-        message.setReplyMarkup(markUpInline);
+        msg.setReplyMarkup(markUpInline);
 
         try {
-            execute(message);
+            execute(msg);
         } catch (TelegramApiException e) {
             log.error("Error sending Events list: {}", e.getMessage());
         }
@@ -804,7 +814,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         var events = eventService.findAllSocialEvents(page, 1, EventType.ORIENTATION);
 
         StringBuilder messageText = new StringBuilder("Orientation events:\n");
-
+        SendPhoto msg = new SendPhoto();
         for (Event event : events) {
             String temple = """
                     This is %s event
@@ -816,12 +826,12 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             String message = String.format(temple, event.getEventType().toString().toLowerCase(),
                     event.getTitle(), event.getDescription(), event.getVenue(), event.getDate().toString(), event.getEventOrganizedBy());
+            msg.setPhoto(new InputFile(event.getPhotoId()));
             messageText.append(message).append("\n");
             log.info("Response Orientation Events {}", events);
         }
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString());
+        msg.setChatId(String.valueOf(chatId));
+        msg.setCaption(messageText.toString());
 
         InlineKeyboardMarkup markUpInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
@@ -830,21 +840,21 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (events.hasPrevious()) {
             var prevButton = new InlineKeyboardButton();
             prevButton.setText("Previous");
-            prevButton.setCallbackData(PREV_BUTTON);
+            prevButton.setCallbackData("orientation events:" + events.previousPageable().getPageNumber());
             rowInLine.add(prevButton);
         }
         if (events.hasNext()) {
             var nextButton = new InlineKeyboardButton();
             nextButton.setText("Next");
-            nextButton.setCallbackData(NEXT_BUTTON);
+            nextButton.setCallbackData("orientation events:" + events.nextPageable().getPageNumber());
             rowInLine.add(nextButton);
         }
         rowsInLine.add(rowInLine);
         markUpInline.setKeyboard(rowsInLine);
-        message.setReplyMarkup(markUpInline);
+        msg.setReplyMarkup(markUpInline);
 
         try {
-            execute(message);
+            execute(msg);
         } catch (TelegramApiException e) {
             log.error("Error sending Orientation Events list: {}", e.getMessage());
         }
@@ -863,7 +873,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         generatorClub.createSpanishClub();
         var clubsPage = clubService.findAllByClubType(page, 1, ClubType.LANGUAGE);
         SendPhoto msg = new SendPhoto();
-        StringBuilder messageText = new StringBuilder("Language clubs:\n");
+        StringBuilder messageText = new StringBuilder();
         for (Club club : clubsPage) {
             String temple = """
                     Club name : %s
@@ -913,7 +923,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void sportClubReceived(long chatId, int page) {
         generatorClub.createSelfDefenceClub();
         var clubsPage = clubService.findAllByClubType(page, 1, ClubType.SPORT);
-        StringBuilder messageText = new StringBuilder("Sport clubs:\n");
+        StringBuilder messageText = new StringBuilder();
         SendPhoto msg = new SendPhoto();
         for (Club club : clubsPage) {
             String temple = """
@@ -965,7 +975,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         generatorClub.createCyberSportClub();
         var clubsPage = clubService.findAllByClubType(page, 1, ClubType.GAME);
         SendPhoto msg = new SendPhoto();
-        StringBuilder messageText = new StringBuilder("Game clubs:\n");
+        StringBuilder messageText = new StringBuilder();
         for (Club club : clubsPage) {
             String temple = """
                     Club name : %s
@@ -1016,7 +1026,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         generatorClub.createFilmMakingClub();
         var clubsPage = clubService.findAllByClubType(page, 1, ClubType.OTHER);
         SendPhoto msg = new SendPhoto();
-        StringBuilder messageText = new StringBuilder("Other clubs:\n");
+        StringBuilder messageText = new StringBuilder();
         for (Club club : clubsPage) {
             String temple = """
                     Club name : %s
@@ -1307,13 +1317,5 @@ public class TelegramBot extends TelegramLongPollingBot {
         var importantRoom = new ImportantRoom("on the left-hand of hall", "Avising room", RoomType.ADMINISTRATIVE, 2);
         importantRoomsService.addRoom(importantRoom);
     }
-
-
-    /// TEST event create
-    void createEvent() {
-        var event = new Event("Session With MR John", " this is event for freshmen and seniors", EventType.SOCIAL, "North hole room 412", LocalDate.now().plusDays(5), "SGA");
-        eventService.addEvent(event);
-    }
-
 
 }
