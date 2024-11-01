@@ -8,6 +8,7 @@ import com.company.telegrambot.enums.EventType;
 import com.company.telegrambot.enums.RoomType;
 import com.company.telegrambot.enums.State;
 import com.company.telegrambot.generetor.GeneratorClub;
+import com.company.telegrambot.generetor.GeneratorProfessor;
 import com.company.telegrambot.repository.UserRepository;
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
@@ -65,6 +66,9 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Autowired
     private GeneratorClub generatorClub;
+
+    @Autowired
+    private GeneratorProfessor generatorProfessor;
 
     @Autowired
     private QuestionService questionService;
@@ -125,9 +129,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "/start":
                     sendHomeMessage(chatId, update.getMessage().getChat().getFirstName());
                     break;
-                case "/pic":
-                    sendPhoto(chatId);
-                    break;
                 default:
                     switch (state) {
                         case HOME:
@@ -168,9 +169,22 @@ public class TelegramBot extends TelegramLongPollingBot {
             String item = partsText[1];
 
 
-            switch (type){
+            switch (type) {
                 case "professors":
-                    allProfessorsReceived(chatId,Integer.parseInt(item));
+                    allProfessorsReceived(chatId, Integer.parseInt(item));
+                    break;
+                    case "language clubs":
+                    languageClubReceived(chatId, Integer.parseInt(item));
+                    break;
+                    case "sport clubs":
+                    sportClubReceived(chatId, Integer.parseInt(item));
+                    break;
+                    case "game clubs":
+                    gameClubReceived(chatId, Integer.parseInt(item));
+                    break;
+                    case "other clubs":
+                    otherClubReceived(chatId, Integer.parseInt(item));
+                    break;
             }
 
             if (callbackData.equals(NEXT_BUTTON)) {
@@ -182,15 +196,15 @@ public class TelegramBot extends TelegramLongPollingBot {
                 } else if (determinerText.startsWith("Orientation events:")) {
                     orientationEventCommandReceived(chatId, currentPage);
                 } else if (determinerText.startsWith("Language clubs:")) {
-                    languageClubReceived(chatId, currentPage);
+//                    languageClubReceived(chatId, currentPage);
                 } else if (determinerText.startsWith("Game clubs:")) {
-                    gameClubReceived(chatId, currentPage);
+//                    gameClubReceived(chatId, currentPage);
                 } else if (determinerText.startsWith("Sport clubs:")) {
-                    sportClubReceived(chatId, currentPage);
+//                    sportClubReceived(chatId, currentPage);
                 } else if (determinerText.startsWith("Other clubs:")) {
-                    otherClubReceived(chatId, currentPage);
+//                    otherClubReceived(chatId, currentPage);
                 } else if (determinerText.startsWith("Professors:")) {
-                    allProfessorsReceived(chatId, currentPage);
+//                    allProfessorsReceived(chatId, currentPage);
                 } else if (determinerText.startsWith("Important rooms:")) {
                     allRoomsReceived(chatId, currentPage);
                 } else if (determinerText.startsWith("Campus facilities:")) {
@@ -845,6 +859,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         generatorClub.createArabicClub();
         generatorClub.createSpanishClub();
         var clubsPage = clubService.findAllByClubType(page, 1, ClubType.LANGUAGE);
+        SendPhoto msg = new SendPhoto();
         StringBuilder messageText = new StringBuilder("Language clubs:\n");
         for (Club club : clubsPage) {
             String temple = """
@@ -855,13 +870,13 @@ public class TelegramBot extends TelegramLongPollingBot {
                     Contact: %s""";
             String message = String.format(temple, club.getName(), club.getDescription(), club.getFounder(), club.getFounderContact(), club.getContact());
             messageText.append(message).append("\n");
+            msg.setPhoto(new InputFile(club.getPhotoId()));
             log.info("Response language Clubs {}", club);
 
         }
 
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString());
+        msg.setChatId(String.valueOf(chatId));
+        msg.setCaption(messageText.toString());
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
@@ -870,31 +885,33 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (clubsPage.hasPrevious()) {
             var prevButton = new InlineKeyboardButton();
             prevButton.setText("Previous");
-            prevButton.setCallbackData(PREV_BUTTON);
+            prevButton.setCallbackData("language clubs:" + clubsPage.previousPageable().getPageNumber());
             rowInline.add(prevButton);
         }
 
         if (clubsPage.hasNext()) {
             var nextButton = new InlineKeyboardButton();
             nextButton.setText("Next");
-            nextButton.setCallbackData(NEXT_BUTTON);
+            nextButton.setCallbackData("language clubs:" + clubsPage.nextPageable().getPageNumber());
             rowInline.add(nextButton);
         }
 
         rowsInline.add(rowInline);
         markupInline.setKeyboard(rowsInline);
-        message.setReplyMarkup(markupInline);
+        msg.setReplyMarkup(markupInline);
 
         try {
-            execute(message);
+            execute(msg);
         } catch (TelegramApiException e) {
             log.error("Error sending Language clubs list: {}", e.getMessage());
         }
     }
 
     private void sportClubReceived(long chatId, int page) {
+        generatorClub.createSelfDefenceClub();
         var clubsPage = clubService.findAllByClubType(page, 1, ClubType.SPORT);
         StringBuilder messageText = new StringBuilder("Sport clubs:\n");
+        SendPhoto msg = new SendPhoto();
         for (Club club : clubsPage) {
             String temple = """
                     Club name : %s
@@ -904,13 +921,13 @@ public class TelegramBot extends TelegramLongPollingBot {
                     Contact: %s""";
             String message = String.format(temple, club.getName(), club.getDescription(), club.getFounder(), club.getFounderContact(), club.getContact());
             messageText.append(message).append("\n");
+            msg.setPhoto(new InputFile(club.getPhotoId()));
             log.info("Response sport Clubs {}", club);
 
         }
 
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString());
+        msg.setChatId(String.valueOf(chatId));
+        msg.setCaption(messageText.toString());
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
@@ -919,32 +936,32 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (clubsPage.hasPrevious()) {
             var prevButton = new InlineKeyboardButton();
             prevButton.setText("Previous");
-            prevButton.setCallbackData(PREV_BUTTON);
+            prevButton.setCallbackData("sport clubs:" + clubsPage.previousPageable().getPageNumber());
             rowInline.add(prevButton);
         }
 
         if (clubsPage.hasNext()) {
             var nextButton = new InlineKeyboardButton();
             nextButton.setText("Next");
-            nextButton.setCallbackData(NEXT_BUTTON);
+            nextButton.setCallbackData("sport clubs:" + clubsPage.nextPageable().getPageNumber());
             rowInline.add(nextButton);
         }
 
         rowsInline.add(rowInline);
         markupInline.setKeyboard(rowsInline);
-        message.setReplyMarkup(markupInline);
+        msg.setReplyMarkup(markupInline);
 
         try {
-            execute(message);
+            execute(msg);
         } catch (TelegramApiException e) {
             log.error("Error sending Campus Facility list: {}", e.getMessage());
         }
     }
 
     private void gameClubReceived(long chatId, int page) {
-        generatorClub.createDotaClub();
-        generatorClub.createCSClub();
+        generatorClub.createCyberSportClub();
         var clubsPage = clubService.findAllByClubType(page, 1, ClubType.GAME);
+        SendPhoto msg = new SendPhoto();
         StringBuilder messageText = new StringBuilder("Game clubs:\n");
         for (Club club : clubsPage) {
             String temple = """
@@ -955,13 +972,13 @@ public class TelegramBot extends TelegramLongPollingBot {
                     Contact: %s""";
             String message = String.format(temple, club.getName(), club.getDescription(), club.getFounder(), club.getFounderContact(), club.getContact());
             messageText.append(message).append("\n");
+            msg.setPhoto(new InputFile(club.getPhotoId()));
             log.info("Response game Clubs {}", club);
 
         }
 
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString());
+        msg.setChatId(String.valueOf(chatId));
+        msg.setCaption(messageText.toString());
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
@@ -970,30 +987,32 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (clubsPage.hasPrevious()) {
             var prevButton = new InlineKeyboardButton();
             prevButton.setText("Previous");
-            prevButton.setCallbackData(PREV_BUTTON);
+            prevButton.setCallbackData("game clubs:" + clubsPage.previousPageable().getPageNumber());
             rowInline.add(prevButton);
         }
 
         if (clubsPage.hasNext()) {
             var nextButton = new InlineKeyboardButton();
             nextButton.setText("Next");
-            nextButton.setCallbackData(NEXT_BUTTON);
+            nextButton.setCallbackData("game clubs:" + clubsPage.nextPageable().getPageNumber());
             rowInline.add(nextButton);
         }
 
         rowsInline.add(rowInline);
         markupInline.setKeyboard(rowsInline);
-        message.setReplyMarkup(markupInline);
+        msg.setReplyMarkup(markupInline);
 
         try {
-            execute(message);
+            execute(msg);
         } catch (TelegramApiException e) {
             log.error("Error game clubs list: {}", e.getMessage());
         }
     }
 
     private void otherClubReceived(long chatId, int page) {
+        generatorClub.createFilmMakingClub();
         var clubsPage = clubService.findAllByClubType(page, 1, ClubType.OTHER);
+        SendPhoto msg = new SendPhoto();
         StringBuilder messageText = new StringBuilder("Other clubs:\n");
         for (Club club : clubsPage) {
             String temple = """
@@ -1004,13 +1023,13 @@ public class TelegramBot extends TelegramLongPollingBot {
                     Contact: %s""";
             String message = String.format(temple, club.getName(), club.getDescription(), club.getFounder(), club.getFounderContact(), club.getContact());
             messageText.append(message).append("\n");
-            log.info("Response other Clubs {}", club);
+            msg.setPhoto(new InputFile(club.getPhotoId()));
+            log.info("Response Other Clubs {}", club);
 
         }
 
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString());
+        msg.setChatId(String.valueOf(chatId));
+        msg.setCaption(messageText.toString());
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
@@ -1019,32 +1038,32 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (clubsPage.hasPrevious()) {
             var prevButton = new InlineKeyboardButton();
             prevButton.setText("Previous");
-            prevButton.setCallbackData(PREV_BUTTON);
+            prevButton.setCallbackData("other clubs:" + clubsPage.previousPageable().getPageNumber());
             rowInline.add(prevButton);
         }
 
         if (clubsPage.hasNext()) {
             var nextButton = new InlineKeyboardButton();
             nextButton.setText("Next");
-            nextButton.setCallbackData(NEXT_BUTTON);
+            nextButton.setCallbackData("other clubs:" + clubsPage.nextPageable().getPageNumber());
             rowInline.add(nextButton);
         }
 
         rowsInline.add(rowInline);
         markupInline.setKeyboard(rowsInline);
-        message.setReplyMarkup(markupInline);
+        msg.setReplyMarkup(markupInline);
 
         try {
-            execute(message);
+            execute(msg);
         } catch (TelegramApiException e) {
-            log.error("Error other clubs list: {}", e.getMessage());
+            log.error("Error Other clubs list: {}", e.getMessage());
         }
     }
 
     private void allProfessorsReceived(long chatId, int page) {
 
-//        createProfessorKh();
-//        createProfessorAzam();
+        generatorProfessor.createProfessorKh();
+        generatorProfessor.createProfessorAzam();
 
         var professors = professorService.findAll(page, 1);
 
@@ -1322,22 +1341,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         importantRoomsService.addRoom(importantRoom);
     }
 
-    /// TEST professor create
-    private void createProfessorKh() {
-        var professor = new Professor("Bayramov Xabibulloh",
-                Utils.professorKHPhoto,
-                "just background Oh acceptance apartments up sympathize astonished delightful. Waiting him new lasting towards",
-                "linkedin.com/in/khabibulloh-bayramov", "xbayramov@webster.edu");
-        professorService.addProfessor(professor);
-    }
-
-    private void createProfessorAzam() {
-        var professor = new Professor("Azam Qahramoniy",
-                Utils.professorKHPhoto,
-                "just background Oh acceptance apartments up sympathize astonished delightful. Waiting him new lasting towards",
-                "linkedin.com/in/azam-qahramoniy", "azamq@webster.edu");
-        professorService.addProfessor(professor);
-    }
 
     /// TEST event create
     void createEvent() {

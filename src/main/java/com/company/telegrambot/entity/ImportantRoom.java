@@ -20,6 +20,9 @@ public class ImportantRoom {
     @Column(name = "location", nullable = false)
     private String location;
 
+    @Column(name = "photo_id", nullable = false)
+    private String photoId;
+
     @Column(name = "responsibility", nullable = false)
     private String responsibility;
 
