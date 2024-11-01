@@ -17,6 +17,9 @@ public class ImportantRoom {
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Integer id;
 
+    @Column(name = "name", nullable = false)
+    private String name;
+
     @Column(name = "location", nullable = false)
     private String location;
 
@@ -36,8 +39,10 @@ public class ImportantRoom {
     private Integer floorNumber;
 
 
-    public ImportantRoom(String location, String responsibility, RoomType roomType, Integer floorNumber) {
+    public ImportantRoom(String name, String location, String photoId, String responsibility, RoomType roomType, Integer floorNumber) {
+        this.name = name;
         this.location = location;
+        this.photoId = photoId;
         this.responsibility = responsibility;
         this.roomType = roomType;
         this.floorNumber = floorNumber;

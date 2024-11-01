@@ -5,11 +5,11 @@ import com.company.telegrambot.config.BotConfig;
 import com.company.telegrambot.entity.*;
 import com.company.telegrambot.enums.ClubType;
 import com.company.telegrambot.enums.EventType;
-import com.company.telegrambot.enums.RoomType;
 import com.company.telegrambot.enums.State;
 import com.company.telegrambot.generetor.GeneratorClub;
 import com.company.telegrambot.generetor.GeneratorFacility;
 import com.company.telegrambot.generetor.GeneratorProfessor;
+import com.company.telegrambot.generetor.GeneratorRoom;
 import com.company.telegrambot.repository.UserRepository;
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -70,6 +69,9 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Autowired
     private GeneratorProfessor generatorProfessor;
+
+    @Autowired
+    private GeneratorRoom generatorRoom;
 
     @Autowired
     private GeneratorFacility generatorFacility;
@@ -192,7 +194,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     allFacilitiesReceived(chatId, Integer.parseInt(item));
                     break;
                 case "social events":
-                    socialEventCommandReceived(chatId,Integer.parseInt(item));
+                    socialEventCommandReceived(chatId, Integer.parseInt(item));
                     break;
                 case "academic events":
                     academicEventCommandReceived(chatId, Integer.parseInt(item));
@@ -223,7 +225,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 } else if (determinerText.startsWith("Important rooms:")) {
                     allRoomsReceived(chatId, currentPage);
                 } else if (determinerText.startsWith("Campus facilities:")) {
-                    allFacilitiesReceived(chatId, currentPage);
+//                    allFacilitiesReceived(chatId, currentPage);
                 } else if (determinerText.startsWith("FAQ:")) {
                     allFaqReceived(chatId, currentPage);
                 }
@@ -248,7 +250,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 } else if (determinerText.startsWith("Professors:")) {
                     allProfessorsReceived(chatId, currentPage);
                 } else if (determinerText.startsWith("Campus facilities:")) {
-                    allFacilitiesReceived(chatId, currentPage);
+//                    allFacilitiesReceived(chatId, currentPage);
                 } else if (determinerText.startsWith("Important rooms:")) {
                     allRoomsReceived(chatId, currentPage);
                 } else if (determinerText.startsWith("FAQ:")) {
@@ -1196,7 +1198,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         generatorFacility.createTherapistFacility();
 
         var facilityPage = campusFacilityService.findAll(page, 1);
-        StringBuilder messageText = new StringBuilder("Campus facilities:\n");
+        StringBuilder messageText = new StringBuilder();
         SendPhoto msg = new SendPhoto();
         for (CampusFacility facility : facilityPage) {
             String temple = """
@@ -1243,28 +1245,27 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void allRoomsReceived(long chatId, int page) {
-        createImportantRoom();
-        createImportantRoom();
-        createImportantRoom();
+        generatorRoom.createImportantRoom();
         var importantRooms = importantRoomsService.findAll(page, 1);
 
-        StringBuilder messageText = new StringBuilder("Important rooms:\n");
-
+        StringBuilder messageText = new StringBuilder();
+        SendPhoto msg = new SendPhoto();
         for (ImportantRoom importantRoom : importantRooms) {
             String temple = """
+                    Name: %s
                     The room location: %s
                     Responsibility of the room: %s\s
                     Room type: %s
                     Floor: %s""";
 
-            String message = String.format(temple, importantRoom.getLocation(), importantRoom.getResponsibility(), importantRoom.getRoomType(), importantRoom.getFloorNumber());
+            String message = String.format(temple, importantRoom.getName(), importantRoom.getLocation(), importantRoom.getResponsibility(), importantRoom.getRoomType(), importantRoom.getFloorNumber());
             messageText.append(message).append("\n");
+            msg.setPhoto(new InputFile(importantRoom.getPhotoId()));
             log.info("Response Important rooms {}", importantRooms.getTotalElements());
         }
 
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString());
+        msg.setChatId(String.valueOf(chatId));
+        msg.setCaption(messageText.toString());
 
         InlineKeyboardMarkup markUpInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
@@ -1273,21 +1274,21 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (importantRooms.hasPrevious()) {
             var prevButton = new InlineKeyboardButton();
             prevButton.setText("Previous");
-            prevButton.setCallbackData(PREV_BUTTON);
+            prevButton.setCallbackData("important rooms:" + importantRooms.previousPageable().getPageNumber());
             rowInLine.add(prevButton);
         }
         if (importantRooms.hasNext()) {
             var nextButton = new InlineKeyboardButton();
             nextButton.setText("Next");
-            nextButton.setCallbackData(NEXT_BUTTON);
+            nextButton.setCallbackData("important rooms:" + importantRooms.nextPageable().getPageNumber());
             rowInLine.add(nextButton);
         }
         rowsInLine.add(rowInLine);
         markUpInline.setKeyboard(rowsInLine);
-        message.setReplyMarkup(markUpInline);
+        msg.setReplyMarkup(markUpInline);
 
         try {
-            execute(message);
+            execute(msg);
         } catch (TelegramApiException e) {
             log.error("Error sending Important rooms list: {}", e.getMessage());
         }
@@ -1309,13 +1310,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         questionService.addQuestion(messageText, chatId);
         sendMessage(chatId, "Your question has been accepted and, we will keep in touch soon !");
         sendHomeMessage(chatId, "");
-    }
-
-
-    /// TEST create an important
-    private void createImportantRoom() {
-        var importantRoom = new ImportantRoom("on the left-hand of hall", "Avising room", RoomType.ADMINISTRATIVE, 2);
-        importantRoomsService.addRoom(importantRoom);
     }
 
 }
