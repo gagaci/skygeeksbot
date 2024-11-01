@@ -8,6 +8,7 @@ import com.company.telegrambot.enums.EventType;
 import com.company.telegrambot.enums.RoomType;
 import com.company.telegrambot.enums.State;
 import com.company.telegrambot.generetor.GeneratorClub;
+import com.company.telegrambot.generetor.GeneratorFacility;
 import com.company.telegrambot.generetor.GeneratorProfessor;
 import com.company.telegrambot.repository.UserRepository;
 import com.vdurmont.emoji.EmojiParser;
@@ -69,6 +70,9 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Autowired
     private GeneratorProfessor generatorProfessor;
+
+    @Autowired
+    private GeneratorFacility generatorFacility;
 
     @Autowired
     private QuestionService questionService;
@@ -163,7 +167,6 @@ public class TelegramBot extends TelegramLongPollingBot {
             String callbackData = update.getCallbackQuery().getData();
             long chatId = update.getCallbackQuery().getMessage().getChatId();
             String determinerText = update.getCallbackQuery().getMessage().getText();
-            String determinerPhoto = update.getCallbackQuery().getMessage().getCaption();
             String[] partsText = callbackData.split(":");
             String type = partsText[0];
             String item = partsText[1];
@@ -173,17 +176,20 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "professors":
                     allProfessorsReceived(chatId, Integer.parseInt(item));
                     break;
-                    case "language clubs":
+                case "language clubs":
                     languageClubReceived(chatId, Integer.parseInt(item));
                     break;
-                    case "sport clubs":
+                case "sport clubs":
                     sportClubReceived(chatId, Integer.parseInt(item));
                     break;
-                    case "game clubs":
+                case "game clubs":
                     gameClubReceived(chatId, Integer.parseInt(item));
                     break;
-                    case "other clubs":
+                case "other clubs":
                     otherClubReceived(chatId, Integer.parseInt(item));
+                    break;
+                case "facilities":
+                    allFacilitiesReceived(chatId, Integer.parseInt(item));
                     break;
             }
 
@@ -282,9 +288,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                 break;
             case "FAQ":
                 faqReceived(chatId);
-                break;
-            case "/pic":
-                sendPhoto(chatId);
                 break;
             default:
                 sendMessage(chatId, "Sorry, command was not recognized");
@@ -1178,25 +1181,27 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void allFacilitiesReceived(long chatId, int page) {
-        createGymFacility();
-        createTherapistFacility();
-        createFoodCourtFacility();
+
+        generatorFacility.createGymFacility();
+        generatorFacility.createTherapistFacility();
+
         var facilityPage = campusFacilityService.findAll(page, 1);
         StringBuilder messageText = new StringBuilder("Campus facilities:\n");
+        SendPhoto msg = new SendPhoto();
         for (CampusFacility facility : facilityPage) {
             String temple = """
                     Facility : %s
                     Location : %s
                     Contact: %s""";
             String message = String.format(temple, facility.getFacility(), facility.getLocation(), facility.getContact());
+            msg.setPhoto(new InputFile(facility.getPhotoId()));
             messageText.append(message).append("\n");
             log.info("Response Facilities {}", facilityPage);
 
         }
 
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString());
+        msg.setChatId(String.valueOf(chatId));
+        msg.setCaption(messageText.toString());
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
@@ -1205,23 +1210,23 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (facilityPage.hasPrevious()) {
             var prevButton = new InlineKeyboardButton();
             prevButton.setText("Previous");
-            prevButton.setCallbackData(PREV_BUTTON);
+            prevButton.setCallbackData("facilities:" + facilityPage.previousPageable().getPageNumber());
             rowInline.add(prevButton);
         }
 
         if (facilityPage.hasNext()) {
             var nextButton = new InlineKeyboardButton();
             nextButton.setText("Next");
-            nextButton.setCallbackData(NEXT_BUTTON);
+            nextButton.setCallbackData("facilities:" + facilityPage.nextPageable().getPageNumber());
             rowInline.add(nextButton);
         }
 
         rowsInline.add(rowInline);
         markupInline.setKeyboard(rowsInline);
-        message.setReplyMarkup(markupInline);
+        msg.setReplyMarkup(markupInline);
 
         try {
-            execute(message);
+            execute(msg);
         } catch (TelegramApiException e) {
             log.error("Error sending Facilities list: {}", e.getMessage());
         }
@@ -1278,27 +1283,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void sendPhoto(Long chatId) {
-        try {
-
-            SendPhoto msg = new SendPhoto();
-            msg.setChatId(String.valueOf(chatId));
-
-//            File photo = new ClassPathResource("static/photo.png").getFile();
-//
-//            InputFile inputFile = new InputFile(photo);
-
-            msg.setPhoto(new InputFile("AgACAgIAAxkBAAEbpqZnI2XoKWMHAAEGr3CgBr9cW__oqeIAAlfhMRvlURhJ9NA9sXeXB7YBAAMCAAN4AAM2BA"));
-
-            msg.setCaption("your photo");
-
-            execute(msg);
-
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
-        }
-
-    }
 
     private void importantRoomsCommandReceived(long chatId) {
         sendRoomMessage(chatId);
@@ -1317,23 +1301,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         sendHomeMessage(chatId, "");
     }
 
-
-    /// TEST create campus facilities
-
-    private void createGymFacility() {
-        var facility = new CampusFacility("Gym facility", "North Hall floor 2, room 5", "@username");
-        campusFacilityService.addFacility(facility);
-    }
-
-    private void createTherapistFacility() {
-        var facility = new CampusFacility("Therapist facility", "North Hall floor 2, room 5", "@username");
-        campusFacilityService.addFacility(facility);
-    }
-
-    private void createFoodCourtFacility() {
-        var facility = new CampusFacility("Food Court", "North Hall floor 2, room 5", "@username");
-        campusFacilityService.addFacility(facility);
-    }
 
     /// TEST create an important
     private void createImportantRoom() {
